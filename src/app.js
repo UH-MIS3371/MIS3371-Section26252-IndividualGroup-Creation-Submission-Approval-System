@@ -80,7 +80,39 @@ invoiceForm.addEventListener("submit", function(event) {
     return;
   }
 
-  formMessage.textContent = "Client-side validation passed. Invoice is ready for review.";
+  
+  // Week 9 - Send invoice to the Express backend
+  const invoice = {
+    invoiceNumber: document.querySelector("#invoiceNumber").value.trim(),
+    customerName: document.querySelector("#customerName").value.trim(),
+    amount: amount,
+    status: statusInput.value
+  };
+
+  formMessage.textContent = "Processing invoice...";
+
+  fetch("/api/invoices", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(invoice)
+  })
+    .then(async (response) => {
+      const result = await response.json();
+
+      if (!response.ok) {
+        formMessage.textContent = result.message || "Invoice rejected.";
+        return;
+      }
+
+      formMessage.textContent =
+        result.message + " " + result.approvalPath;
+    })
+    .catch(() => {
+      formMessage.textContent =
+        "Unable to connect to the invoice server.";
+    });
 });
 
 // Week 7 boundary and business rule tests
