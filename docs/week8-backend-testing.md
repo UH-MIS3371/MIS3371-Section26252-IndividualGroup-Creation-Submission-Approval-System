@@ -18,19 +18,25 @@ Validate invoice information independently of the browser, apply invoice busines
 ## Test Cases
 | Test | Expected Success | Actual Success | Result |
 |---|---|---|---|
-| Valid 1 - Submitted invoice | true | Not yet verified | Pending |
-| Valid 2 - Under Review invoice | true | Not yet verified | Pending |
-| Invalid 1 - Missing invoice number | false | Not yet verified | Pending |
-| Invalid 2 - Unsupported status | false | Not yet verified | Pending |
-| Boundary 1 - Zero amount | false | Not yet verified | Pending |
-| Boundary 2 - Minimum positive amount ($0.01) | true | Not yet verified | Pending |
+| Valid 1 - Submitted invoice | true | true | PASS |
+| Valid 2 - Under Review invoice | true | true | PASS |
+| Invalid 1 - Missing invoice number | false | false | PASS |
+| Invalid 2 - Unsupported status | false | false | PASS |
+| Boundary 1 - Zero amount | false | false | PASS |
+| Boundary 2 - Minimum positive amount ($0.01) | true | true | PASS |
 
 ## Test Execution
 Run from the project root:
 
 `node backend/test-backend.js`
 
-Record the actual console output and update the Actual Success and Result columns after executing the tests.
 
 ## Current Status
-Six test cases have been written. Actual execution results have not yet been independently verified. No frontend/backend integration, API, AWS, or database is required for Week 8.
+
+All six backend test cases were executed successfully
+on October 22, 2026, using Node.js in GitHub Codespaces.
+All tests passed (6/6).
+
+The tests verified valid invoice processing,
+invalid input rejection, and invoice amount
+boundary conditions.
