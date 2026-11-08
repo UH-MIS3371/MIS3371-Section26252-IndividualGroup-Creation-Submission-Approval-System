@@ -1,122 +1,214 @@
+
+ // MIS 3371 - Invoice Creation, Submission, and Approval System
+// AWS Lambda Frontend Integration
+
+const LAMBDA_URL =
+  "https://nz2y522hueew5fiyo5bbolrxtq0xzzio.lambda-url.us-east-1.on.aws/";
+
+// Week 6 - Invoice Approval Business Rule
+
 function canApproveInvoice(status) {
-    if (status === "Under Review") {
-        return "Invoice can be approved";
-    } else {
-        return "Invoice cannot be approved";
-    }
+  if (status === "Under Review") {
+    return "Invoice can be approved";
+  } else {
+    return "Invoice cannot be approved";
+  }
 }
 
-// Test the business rule with multiple invoice statuses
+// Test the business rule
 console.log("Draft:", canApproveInvoice("Draft"));
 console.log("Submitted:", canApproveInvoice("Submitted"));
 console.log("Under Review:", canApproveInvoice("Under Review"));
 console.log("Approved:", canApproveInvoice("Approved"));
+
+// Form elements
+const invoiceForm = document.querySelector("form");
 const statusInput = document.querySelector("#invoiceStatus");
 const approvalMessage = document.querySelector("#approvalMessage");
-
-statusInput.addEventListener("change", function () {
-    const status = statusInput.value;
-
-    if (status === "") {
-        approvalMessage.textContent = "";
-    } else {
-        approvalMessage.textContent = canApproveInvoice(status);
-    }
-});
-
- // Week 7 - Invoice Validation and Business Rules
-
-const invoiceForm = document.querySelector("form");
 const amountInput = document.querySelector("#amount");
 const descriptionInput = document.querySelector("#description");
 const urgentInput = document.querySelector("#urgent");
+const normalInput = document.querySelector("#normal");
 const formMessage = document.querySelector("#formMessage");
+const invoiceNumberInput = document.querySelector("#invoiceNumber");
+const customerNameInput = document.querySelector("#customerName");
 
-// Rule 1: Invoice amount must be greater than zero
+// Display approval eligibility
+statusInput.addEventListener("change", function () {
+  const status = statusInput.value;
+
+  if (status === "") {
+    approvalMessage.textContent = "";
+  } else {
+    approvalMessage.textContent = canApproveInvoice(status);
+  }
+});
+
+// Week 7 - Invoice Validation
+
 function validInvoiceAmount(amount) {
   return Number.isFinite(amount) && amount > 0;
 }
 
-// Rule 2: Urgent invoices require an explanation
 function urgentExplanationSatisfied(isUrgent, description) {
   return !isUrgent || description.trim().length > 0;
 }
 
-// Display feedback when the user changes the form
+// Display validation messages
 function updateValidationMessage() {
   const amount = Number(amountInput.value);
   const description = descriptionInput.value;
 
-  if (amountInput.value !== "" && !validInvoiceAmount(amount)) {
-    formMessage.textContent = "Invoice amount must be greater than $0.";
-  } else if (!urgentExplanationSatisfied(urgentInput.checked, description)) {
-    formMessage.textContent = "Urgent invoices require an explanation.";
+  if (
+    amountInput.value !== "" &&
+    !validInvoiceAmount(amount)
+  ) {
+    formMessage.textContent =
+      "Invoice amount must be greater than $0.";
+  } else if (
+    !urgentExplanationSatisfied(
+      urgentInput.checked,
+      description
+    )
+  ) {
+    formMessage.textContent =
+      "Urgent invoices require an explanation.";
   } else {
     formMessage.textContent = "";
   }
 }
 
+// Listen for form changes
 amountInput.addEventListener("input", updateValidationMessage);
 descriptionInput.addEventListener("input", updateValidationMessage);
 urgentInput.addEventListener("change", updateValidationMessage);
-document.querySelector("#normal").addEventListener("change", updateValidationMessage);
+normalInput.addEventListener("change", updateValidationMessage);
 
-// Block submission when validation fails
-invoiceForm.addEventListener("submit", function(event) {
+// Week 9 - AWS Lambda Backend Integration
+
+invoiceForm.addEventListener("submit", async function (event) {
   event.preventDefault();
 
   const amount = Number(amountInput.value);
-  const description = descriptionInput.value;
+  const description = descriptionInput.value.trim();
+  const invoiceNumber = invoiceNumberInput.value.trim();
+  const customerName = customerNameInput.value.trim();
+  const status = statusInput.value;
 
+  // Validate invoice number
+  if (invoiceNumber === "") {
+    formMessage.textContent =
+      "Invoice number is required.";
+    invoiceNumberInput.focus();
+    return;
+  }
+
+  // Validate customer name
+  if (customerName === "") {
+    formMessage.textContent =
+      "Customer name is required.";
+    customerNameInput.focus();
+    return;
+  }
+
+  // Validate amount
   if (!validInvoiceAmount(amount)) {
-    formMessage.textContent = "Invoice amount must be greater than $0.";
+    formMessage.textContent =
+      "Invoice amount must be greater than $0.";
     amountInput.focus();
     return;
   }
 
-  if (!urgentExplanationSatisfied(urgentInput.checked, description)) {
-    formMessage.textContent = "Urgent invoices require an explanation.";
+  // Validate status
+  if (status === "") {
+    formMessage.textContent =
+      "Please select an invoice status.";
+    statusInput.focus();
+    return;
+  }
+
+  // Validate urgent invoice
+  if (
+    !urgentExplanationSatisfied(
+      urgentInput.checked,
+      description
+    )
+  ) {
+    formMessage.textContent =
+      "Urgent invoices require an explanation.";
     descriptionInput.focus();
     return;
   }
 
-  
-  // Week 9 - Send invoice to the Express backend
+  // Prepare invoice data
   const invoice = {
-    invoiceNumber: document.querySelector("#invoiceNumber").value.trim(),
-    customerName: document.querySelector("#customerName").value.trim(),
+    invoiceNumber: invoiceNumber,
+    customerName: customerName,
     amount: amount,
-    status: statusInput.value
+    status: status,
+    description: description
   };
 
-  formMessage.textContent = "Processing invoice...";
+  formMessage.textContent =
+    "Processing invoice...";
 
-  fetch("/api/invoices", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(invoice)
-  })
-    .then(async (response) => {
-      const result = await response.json();
-
-      if (!response.ok) {
-        formMessage.textContent = result.message || "Invoice rejected.";
-        return;
-      }
-
-      formMessage.textContent =
-        result.message + " " + result.approvalPath;
-    })
-    .catch(() => {
-      formMessage.textContent =
-        "Unable to connect to the invoice server.";
+  try {
+    // Send invoice to AWS Lambda
+    const response = await fetch(LAMBDA_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(invoice)
     });
+
+    const result = await response.json();
+
+    // Handle rejected invoices
+    if (!response.ok || result.success === false) {
+      formMessage.textContent =
+        result.message || "Invoice rejected.";
+      return;
+    }
+
+    // Display successful validation
+    const eligible =
+      result.invoice?.eligibleForApproval;
+
+    if (eligible === true) {
+      formMessage.textContent =
+        (result.message || "Invoice validated successfully.") +
+        " Invoice is eligible for approval.";
+    } else {
+      formMessage.textContent =
+        (result.message || "Invoice validated successfully.") +
+        " Invoice is not eligible for approval.";
+    }
+
+    console.log("AWS Lambda Response:", result);
+
+  } catch (error) {
+    console.error("AWS Lambda Error:", error);
+
+    formMessage.textContent =
+      "Unable to connect to the invoice server.";
+  }
 });
 
-// Week 7 boundary and business rule tests
-console.log("Amount $0:", validInvoiceAmount(0));       // false
-console.log("Amount $0.01:", validInvoiceAmount(0.01)); // true
-console.log("Urgent without explanation:", urgentExplanationSatisfied(true, "")); // false
-console.log("Urgent with explanation:", urgentExplanationSatisfied(true, "Immediate processing needed")); // true
+// Week 7 - Boundary and Business Rule Tests
+
+console.log("Amount $0:", validInvoiceAmount(0));
+console.log("Amount $0.01:", validInvoiceAmount(0.01));
+
+console.log(
+  "Urgent without explanation:",
+  urgentExplanationSatisfied(true, "")
+);
+
+console.log(
+  "Urgent with explanation:",
+  urgentExplanationSatisfied(
+    true,
+    "Immediate processing needed"
+  )
+);
