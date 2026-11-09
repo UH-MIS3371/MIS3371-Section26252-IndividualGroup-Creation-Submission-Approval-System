@@ -1,9 +1,10 @@
 
- // MIS 3371 - Invoice Creation, Submission, and Approval System
-// AWS Lambda Frontend Integration
+// MIS 3371 - Invoice Creation, Submission, and Approval System
+// AWS Amplify + API Gateway + AWS Lambda Integration
 
-const LAMBDA_URL =
-  "https://nz2y522hueew5fiyo5bbolrxtq0xzzio.lambda-url.us-east-1.on.aws/";
+// API Gateway endpoint
+const API_URL =
+  "https://ofi5ftcd70.execute-api.us-east-1.amazonaws.com/api/invoices";
 
 // Week 6 - Invoice Approval Business Rule
 
@@ -82,9 +83,12 @@ function updateValidationMessage() {
 amountInput.addEventListener("input", updateValidationMessage);
 descriptionInput.addEventListener("input", updateValidationMessage);
 urgentInput.addEventListener("change", updateValidationMessage);
-normalInput.addEventListener("change", updateValidationMessage);
 
-// Week 9 - AWS Lambda Backend Integration
+if (normalInput) {
+  normalInput.addEventListener("change", updateValidationMessage);
+}
+
+// Week 9 - AWS API Gateway and Lambda Integration
 
 invoiceForm.addEventListener("submit", async function (event) {
   event.preventDefault();
@@ -112,7 +116,10 @@ invoiceForm.addEventListener("submit", async function (event) {
   }
 
   // Validate amount
-  if (!validInvoiceAmount(amount)) {
+  if (
+    amountInput.value.trim() === "" ||
+    !validInvoiceAmount(amount)
+  ) {
     formMessage.textContent =
       "Invoice amount must be greater than $0.";
     amountInput.focus();
@@ -153,8 +160,8 @@ invoiceForm.addEventListener("submit", async function (event) {
     "Processing invoice...";
 
   try {
-    // Send invoice to AWS Lambda
-    const response = await fetch(LAMBDA_URL, {
+    // Send invoice through API Gateway to AWS Lambda
+    const response = await fetch(API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -163,6 +170,8 @@ invoiceForm.addEventListener("submit", async function (event) {
     });
 
     const result = await response.json();
+
+    console.log("AWS API Gateway Response:", result);
 
     // Handle rejected invoices
     if (!response.ok || result.success === false) {
@@ -185,10 +194,8 @@ invoiceForm.addEventListener("submit", async function (event) {
         " Invoice is not eligible for approval.";
     }
 
-    console.log("AWS Lambda Response:", result);
-
   } catch (error) {
-    console.error("AWS Lambda Error:", error);
+    console.error("AWS API Gateway Error:", error);
 
     formMessage.textContent =
       "Unable to connect to the invoice server.";
