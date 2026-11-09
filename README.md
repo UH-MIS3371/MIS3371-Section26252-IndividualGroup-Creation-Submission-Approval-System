@@ -1,30 +1,21 @@
-# Invoice Creation, Submission & Approval System
+## AWS Cloud Integration and Testing
 
-## Project Overview
-This project is an Invoice Creation, Submission, and Approval System designed to improve the process of creating, reviewing, approving, and tracking invoices.
+The Invoice Creation, Submission, and Approval System uses AWS Amplify to host the frontend and AWS Lambda (Node.js) to validate invoices through an HTTP endpoint.
 
-## Business Problem
-Invoice processing can involve multiple steps and employees, making it difficult to track whether an invoice has been completed, submitted for review, approved, or needs corrections. A centralized system would provide a clear workflow and allow users to track an invoice throughout the process.
+### Business Rules
+- Invoice amount must be greater than $0.
+- Invoice number and customer name are required.
+- Urgent invoices require an explanation.
+- Only invoices with Under Review status are eligible for approval.
 
-## Main Transaction
-The main transaction is the creation and processing of an invoice from initial creation through approval.
+### Testing Results
+- Valid invoice: Passed backend validation.
+- Invalid amount ($0): Correctly rejected by frontend validation.
+- Draft/Submitted status: Not eligible for approval.
+- Under Review status: Eligible for approval.
+- Frontend-to-Lambda connection: Successful.
 
-## Stakeholders
-- Billing Employee – creates and submits invoices.
-- Reviewer/Manager – reviews invoices for accuracy.
-- Approver – approves or rejects submitted invoices.
+### Deployment
+Frontend: https://main.d2f8gqlgdrgb6q.amplifyapp.com
 
-## Invoice Statuses
-Draft → Submitted → Under Review → Approved / Rejected
-
-## Project Scope
-The system will allow users to create invoices, submit them for review, track their status, and record approval or rejection decisions.
-## Project Documentation
-
-Additional project documentation is available in the `docs` folder:
-
-- [Project Proposal](docs/proposal.md)
-- [System Requirements](docs/requirements.md)
-- [Business Rules and Invoice States](docs/business-rules.md)
-- [Project Scope](docs/scope.md)
-- [Project Charter](docs/team-charter.md)
+The AWS Lambda function is configured with CORS to allow requests from the deployed frontend.
